@@ -1,2 +1,0 @@
-# EW-strategy-
-My strategy 

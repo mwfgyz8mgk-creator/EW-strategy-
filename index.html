@@ -1,0 +1,297 @@
+# EW-strategy-
+My strategy 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>EW Strategy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080c14;--bg2:#0d1421;--bg3:#111827;--border:#1e293b;--gold:#f0b429;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--text:#e2e8f0;--muted:#64748b}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;padding:16px;min-height:100vh}
+h1{font-size:22px;font-weight:900;background:linear-gradient(90deg,#f0b429,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:4px}
+.sub{text-align:center;font-size:10px;color:var(--muted);letter-spacing:3px;margin-bottom:20px}
+.search-box{display:flex;gap:8px;margin-bottom:12px}
+input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;color:var(--text);font-family:'Courier New',monospace;font-size:13px;outline:none}
+input:focus{border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:#000;border:none;border-radius:6px;padding:10px 16px;font-family:'Courier New',monospace;font-weight:900;font-size:12px;cursor:pointer}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.qc{background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:'Courier New',monospace}
+.qc:active{border-color:var(--gold);color:var(--gold)}
+.tf-row{display:flex;gap:6px;margin-bottom:16px}
+.tf{flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:7px 4px;font-size:11px;cursor:pointer;font-family:'Courier New',monospace}
+.tf.active{background:#f0b42922;color:var(--gold);border-color:var(--gold)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px}
+.ct{font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:12px}
+.price-big{font-size:28px;font-weight:900;color:var(--gold)}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.g4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.si{background:var(--bg3);border-radius:6px;padding:10px;border:1px solid var(--border)}
+.sl{font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:4px}
+.sv{font-size:13px;font-weight:900}
+.wr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px}
+.wr:last-child{border-bottom:none}
+.ci{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:5px;margin-bottom:6px;font-size:11px}
+.sb{padding:12px;border-radius:6px;font-size:12px;font-weight:700;text-align:center;margin-bottom:14px;letter-spacing:1px}
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+.err{text-align:center;padding:20px;color:var(--red);font-size:12px}
+.disc{text-align:center;font-size:9px;color:#334155;margin-top:20px;letter-spacing:1px;line-height:1.8}
+canvas{width:100%!important;display:block;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>ELLIOTT WAVE</h1>
+<div class="sub">STRATEGY ANALYZER · SPOT SIGNALS ONLY</div>
+<div class="search-box">
+<input type="text" id="coinInput" placeholder="Type coin name (bitcoin, xrp, solana...)"/>
+<button class="btn-gold" onclick="loadCoin()">ANALYZE</button>
+</div>
+<div class="quick">
+<button class="qc" onclick="quickLoad('bitcoin')">BTC</button>
+<button class="qc" onclick="quickLoad('ripple')">XRP</button>
+<button class="qc" onclick="quickLoad('ethereum')">ETH</button>
+<button class="qc" onclick="quickLoad('solana')">SOL</button>
+<button class="qc" onclick="quickLoad('binancecoin')">BNB</button>
+<button class="qc" onclick="quickLoad('chaingpt')">CGPT</button>
+</div>
+<div class="tf-row">
+<button class="tf active" onclick="setTF(365,this)">1Y</button>
+<button class="tf" onclick="setTF(730,this)">2Y</button>
+<button class="tf" onclick="setTF(1460,this)">4Y</button>
+<button class="tf" onclick="setTF('max',this)">MAX</button>
+</div>
+<div id="main"><div class="loading">Tap a coin above to begin.</div></div>
+<div class="disc">FOR EDUCATIONAL PURPOSES ONLY · NOT FINANCIAL ADVICE<br>SPOT TRADING ONLY · ALWAYS MANAGE YOUR RISK</div>
+<script>
+const KEY='CG-DJnA8sWPRSUuF8Xz27Fhastn';
+const BASE='https://api.coingecko.com/api/v3';
+let days=365,coinId='',data=[],info={};
+
+function setTF(d,btn){
+days=d;
+document.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+btn.classList.add('active');
+if(coinId)fetch2(coinId);
+}
+
+function quickLoad(id){
+document.getElementById('coinInput').value=id;
+coinId=id;fetch2(id);
+}
+
+async function loadCoin(){
+const v=document.getElementById('coinInput').value.trim().toLowerCase();
+if(!v)return;
+show('<div class="loading">Searching...</div>');
+try{
+const r=await fetch(`${BASE}/search?query=${v}`,{headers:{'x-cg-demo-api-key':KEY}});
+const d=await r.json();
+if(!d.coins||!d.coins.length){show('<div class="err">Coin not found.</div>');return;}
+coinId=d.coins[0].id;fetch2(coinId);
+}catch(e){show(`<div class="err">Error: ${e.message}</div>`);}
+}
+
+async function fetch2(id){
+show('<div class="loading">Loading live data...</div>');
+try{
+const[cr,ir]=await Promise.all([
+fetch(`${BASE}/coins/${id}/market_chart?vs_currency=usd&days=${days}&interval=daily`,{headers:{'x-cg-demo-api-key':KEY}}),
+fetch(`${BASE}/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`,{headers:{'x-cg-demo-api-key':KEY}})
+]);
+const cd=await cr.json();
+const id2=await ir.json();
+if(!cd.prices||!cd.prices.length){show('<div class="err">No data.</div>');return;}
+data=cd.prices.map(p=>({date:new Date(p[0]),price:p[1]}));
+info=id2;render();
+}catch(e){show(`<div class="err">API Error: ${e.message}</div>`);}
+}
+
+function show(h){document.getElementById('main').innerHTML=h;}
+
+function waves(data){
+if(data.length<10)return[];
+const pr=data.map(d=>d.price),n=pr.length;
+const win=Math.max(5,Math.floor(n/25));
+const pv=[];
+for(let i=win;i<n-win;i++){
+const sl=pr.slice(i-win,i+win+1);
+const mx=Math.max(...sl),mn=Math.min(...sl);
+if(pr[i]===mx&&pr[i]>pr[i-1]&&pr[i]>pr[i+1])pv.push({idx:i,price:pr[i],type:'peak',date:data[i].date});
+else if(pr[i]===mn&&pr[i]<pr[i-1]&&pr[i]<pr[i+1])pv.push({idx:i,price:pr[i],type:'trough',date:data[i].date});
+}
+pv.unshift({idx:0,price:pr[0],type:pr[0]<pr[10]?'trough':'peak',date:data[0].date});
+pv.push({idx:n-1,price:pr[n-1],type:'current',date:data[n-1].date});
+const sig=[pv[0]];
+for(let i=1;i<pv.length;i++){
+const prev=sig[sig.length-1],curr=pv[i];
+if(prev.type===curr.type){
+if(curr.type==='peak'&&curr.price>prev.price)sig[sig.length-1]=curr;
+else if(curr.type==='trough'&&curr.price<prev.price)sig[sig.length-1]=curr;
+continue;
+}
+if(Math.abs((curr.price-prev.price)/prev.price)>0.12)sig.push(curr);
+}
+const lb=['W1','W2','W3','W4','W5','Wave A','Wave B','Wave C'];
+return sig.slice(0,8).map((p,i)=>({...p,label:lb[i]||`P${i+1}`,color:p.type==='peak'?'#22c55e':p.type==='trough'?'#ef4444':'#f0b429'}));
+}
+
+function signal(ws,price){
+const ath=info?.market_data?.ath?.usd||Math.max(...ws.map(w=>w.price));
+const pct=((price-ath)/ath)*100;
+let status,color,note,sl=price*0.88,hsl=price*0.80;
+let tp1,tp2,tp3,tp4;
+if(pct<-65){
+status='🟢 STRONG BUY ZONE';color='#22c55e';
+note='65%+ below ATH. High probability Wave 2/C bottom. Accumulate spot.';
+sl=price*0.85;tp1=price*1.5;tp2=price*2.2;tp3=price*3.5;tp4=ath*1.1;
+}else if(pct<-50){
+status='🟡 WATCH ZONE — Getting Close';color='#f0b429';
+note='50-65% below ATH. Wait for RSI oversold + MACD cross before entering.';
+sl=price*0.87;tp1=price*1.4;tp2=price*2.0;tp3=price*3.0;tp4=ath;
+}else if(pct<-25){
+status='🟠 CORRECTION IN PROGRESS — Wait';color='#f97316';
+note='Correcting but not deep enough. Wave C may have more downside. Be patient.';
+sl=price*0.88;tp1=price*1.25;tp2=price*1.6;tp3=price*2.2;tp4=ath;
+}else{
+status='🔵 NEAR HIGHS — No Entry Yet';color='#3b82f6';
+note='Price near ATH. Wait for 50%+ correction before entering spot.';
+sl=price*0.88;tp1=price*1.15;tp2=price*1.4;tp3=price*1.8;tp4=ath*1.2;
+}
+return{status,color,note,sl,hsl,tp1,tp2,tp3,tp4,pct,ath,entry:[price*0.97,price*1.02]};
+}
+
+function checks(sig,ws){
+const p=sig.pct;
+return[
+{l:'5-Wave Impulse Detected',ok:ws.length>=5},
+{l:'ABC Correction Identified',ok:ws.length>=6},
+{l:'Price -50%+ From ATH',ok:p<-50},
+{l:'Entry Zone Reached (-65%)',ok:p<-65},
+{l:'Strong Support Present',ok:p<-60},
+{l:'Fibonacci Confluence',ok:p<-55},
+];
+}
+
+function fp(p){
+if(!p&&p!==0)return'N/A';
+if(p>=1000)return'$'+p.toLocaleString('en-US',{maximumFractionDigits:0});
+if(p>=1)return'$'+p.toFixed(3);
+if(p>=0.01)return'$'+p.toFixed(4);
+return'$'+p.toFixed(6);
+}
+
+function fpc(p){return(p>=0?'+':'')+p.toFixed(1)+'%';}
+
+function drawChart(data,ws){
+const c=document.getElementById('chart');
+if(!c)return;
+const ctx=c.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+const W=c.offsetWidth,H=260;
+c.width=W*dpr;c.height=H*dpr;c.style.height=H+'px';
+ctx.scale(dpr,dpr);
+const P={t:20,r:16,b:30,l:58};
+const cW=W-P.l-P.r,cH=H-P.t-P.b;
+const pr=data.map(d=>d.price);
+const mn=Math.min(...pr),mx=Math.max(...pr),rng=mx-mn;
+const xS=i=>P.l+(i/(data.length-1))*cW;
+const yS=p=>P.t+cH-((p-mn)/rng)*cH;
+ctx.fillStyle='#080c14';ctx.fillRect(0,0,W,H);
+for(let i=0;i<=4;i++){
+const y=P.t+(i/4)*cH;
+ctx.strokeStyle='#1e293b';ctx.lineWidth=0.5;
+ctx.beginPath();ctx.moveTo(P.l,y);ctx.lineTo(P.l+cW,y);ctx.stroke();
+ctx.fillStyle='#475569';ctx.font='9px monospace';ctx.textAlign='right';
+ctx.fillText(fp(mx-(i/4)*rng),P.l-4,y+3);
+}
+const step=Math.floor(data.length/4);
+for(let i=0;i<data.length;i+=step){
+ctx.fillStyle='#334155';ctx.font='8px monospace';ctx.textAlign='center';
+ctx.fillText(data[i].date.toLocaleDateString('en-US',{month:'short',year:'2-digit'}),xS(i),H-5);
+}
+const gr=ctx.createLinearGradient(0,P.t,0,P.t+cH);
+gr.addColorStop(0,'rgba(240,180,41,0.2)');gr.addColorStop(1,'rgba(240,180,41,0.01)');
+ctx.beginPath();
+data.forEach((d,i)=>i===0?ctx.moveTo(xS(i),yS(d.price)):ctx.lineTo(xS(i),yS(d.price)));
+ctx.lineTo(xS(data.length-1),P.t+cH);ctx.lineTo(xS(0),P.t+cH);
+ctx.closePath();ctx.fillStyle=gr;ctx.fill();
+ctx.beginPath();ctx.strokeStyle='#f0b429';ctx.lineWidth=2;
+data.forEach((d,i)=>i===0?ctx.moveTo(xS(i),yS(d.price)):ctx.lineTo(xS(i),yS(d.price)));
+ctx.stroke();
+if(ws.length>1){
+ctx.beginPath();ctx.strokeStyle='rgba(240,180,41,0.35)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+ws.forEach((w,i)=>i===0?ctx.moveTo(xS(w.idx),yS(w.price)):ctx.lineTo(xS(w.idx),yS(w.price)));
+ctx.stroke();ctx.setLineDash([]);
+}
+ws.forEach(w=>{
+const x=xS(w.idx),y=yS(w.price);
+const top=w.type==='peak',off=top?-20:20;
+ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=w.color;ctx.fill();
+ctx.fillStyle=w.color;ctx.fillRect(x-17,y+off-9,34,16);
+ctx.fillStyle='#000';ctx.font='bold 8px monospace';ctx.textAlign='center';
+ctx.fillText(w.label,x,y+off+3);
+ctx.fillStyle=w.color;ctx.font='7px monospace';
+ctx.fillText(fp(w.price),x,y+off+(top?-14:18));
+});
+}
+
+function render(){
+const ws=waves(data);
+const price=data[data.length-1]?.price||0;
+const sig=signal(ws,price);
+const ch=checks(sig,ws);
+const score=ch.filter(c=>c.ok).length;
+const chg=info?.market_data?.price_change_percentage_24h||0;
+const name=info?.name||coinId.toUpperCase();
+const sym=info?.symbol?.toUpperCase()||'';
+show(`
+<div style="text-align:center;font-size:12px;color:var(--muted);letter-spacing:2px;margin-bottom:16px">${name} (${sym})</div>
+<div class="card">
+<div class="ph">
+<div><div class="ct">LIVE PRICE</div><div class="price-big">${fp(price)}</div></div>
+<div style="text-align:right">
+<div style="font-size:13px;font-weight:700;color:${chg>=0?'var(--green)':'var(--red)'}">${fpc(chg)} 24H</div>
+<div style="font-size:10px;color:var(--muted);margin-top:4px">ATH: ${fp(sig.ath)}</div>
+<div style="font-size:10px;color:var(--muted)">From ATH: <span style="color:var(--red)">${fpc(sig.pct)}</span></div>
+</div>
+</div>
+</div>
+<div class="card" style="padding:12px">
+<div class="ct">PRICE CHART + WAVE COUNT</div>
+<canvas id="chart"></canvas>
+</div>
+<div class="sb" style="background:${sig.color}18;border:1px solid ${sig.color}44;color:${sig.color}">${sig.status}</div>
+<div class="card">
+<div class="ct">SIGNAL LEVELS</div>
+<div class="g4">
+${[
+{l:'ENTRY ZONE',v:fp(sig.entry[0])+' – '+fp(sig.entry[1]),c:'#22c55e'},
+{l:'STOP LOSS',v:fp(sig.sl),c:'#ef4444'},
+{l:'TP1',v:fp(sig.tp1),c:'#f0b429'},
+{l:'TP2',v:fp(sig.tp2),c:'#f0b429'},
+{l:'TP3',v:fp(sig.tp3),c:'#f0b429'},
+{l:'TP4',v:fp(sig.tp4),c:'#f0b429'},
+].map(({l,v,c})=>`<div class="si" style="border-color:${c}33"><div class="sl">${l}</div><div class="sv" style="color:${c}">${v}</div></div>`).join('')}
+</div>
+<div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:5px;font-size:11px;color:var(--muted);line-height:1.6">⚠️ ${sig.note}</div>
+</div>
+<div class="card">
+<div class="ct">WAVE COUNT</div>
+${ws.map(w=>`<div class="wr"><span style="color:${w.color};font-weight:900">${w.label}</span><span style="color:var(--muted);font-size:10px">${w.date.toLocaleDateString('en-US',{month:'short',year:'numeric'})}</span><span style="font-weight:700">${fp(w.price)}</span><span style="font-size:10px;color:${w.type==='peak'?'var(--green)':'var(--red)'}">${w.type==='peak'?'▲ TOP':w.type==='trough'?'▼ BOT':'● NOW'}</span></div>`).join('')}
+</div>
+<div class="card">
+<div class="ct">CHECKLIST — ${score}/6</div>
+${ch.map(c=>`<div class="ci" style="background:${c.ok?'#22c55e0d':'#ef44440d'};border:1px solid ${c.ok?'#22c55e22':'#ef444422'}"><span>${c.ok?'✅':'❌'}</span><span style="color:${c.ok?'var(--text)':'var(--muted)'}">${c.l}</span></div>`).join('')}
+<div style="margin-top:10px;padding:10px;border-radius:5px;text-align:center;font-size:12px;font-weight:700;background:${score>=5?'#22c55e11':score>=3?'#f0b42911':'#ef444411'};border:1px solid ${score>=5?'#22c55e33':score>=3?'#f0b42933':'#ef444433'};color:${score>=5?'var(--green)':score>=3?'var(--gold)':'var(--red)'}">
+${score>=5?'🔥 HIGH CONFIDENCE — Full position':score>=3?'⚡ MEDIUM — Reduced position 50%':'🚫 LOW — Skip this trade'}
+</div>
+</div>
+`);
+requestAnimationFrame(()=>drawChart(data,ws));
+}
+
+document.getElementById('coinInput').addEventListener('keypress',e=>{if(e.key==='Enter')loadCoin();});
+</script>
+</body>
+</html>
